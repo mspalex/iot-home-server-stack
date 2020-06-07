@@ -1,0 +1,82 @@
+version: '3.3'
+services:
+
+  # monitor containers
+  portainer:
+    image: portainer/portainer:latest
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 36000:9000
+#      - 8000:8000
+    networks:
+      localnetwork:
+    user: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/master/volumes/portainer:/data
+
+  # dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 36001:3000
+    networks:
+      localnetwork:
+    user: "1000"
+    volumes:
+      - /home/master/volumes/grafana:/var/lib/grafana
+
+  # broker
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - /home/master/volumes/mosquitto:/mosquitto"
+    ports:
+      - 36002:1883
+    networks:
+      - localnetwork
+    user: "1000"
+
+  # time series database
+  influxdb:
+    image: influxdb:0.12
+    ports:
+      - 36003:8086
+    networks:
+      localnetwork:
+    user: "1000"
+    volumes:
+      - /home/master/volumes/influxdb:/var/lib/influxdb
+
+  # database data exploration
+  chronograf:
+    image: chronograf:0.12
+    ports:
+      - 36005:10000
+    networks:
+      localnetwork:
+    links:
+      - influxdb
+    user: "1000"
+    volumes:
+      - /home/master/volumes/chronograf:/var/lib/chronograf
+
+  # rules engine
+  nodered:
+    image: nodered/node-red:latest
+    depends_on:
+      - mosquitto
+    environment:
+      - TZ=Europe/Lisbon
+    ports:
+      - 36006:1880
+    networks:
+      localnetwork:
+    user: "1000"
+    volumes:
+      - /home/master/volumes/nodered:/data
+
+
+networks:
+  localnetwork:
